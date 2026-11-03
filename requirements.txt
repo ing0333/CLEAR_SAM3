@@ -1,0 +1,12 @@
+# SAM 3 itself: git clone https://github.com/facebookresearch/sam3 && pip install --no-deps -e sam3
+# (--no-deps avoids sam3's numpy<2 pin downgrading Colab's numpy)
+torch>=2.7
+torchvision
+timm>=1.0.17
+ftfy
+iopath
+huggingface_hub
+numpy
+scikit-learn
+pillow
+pytest

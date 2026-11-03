@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+# never commit weights, data, caches or tokens
+*.pt
+*.safetensors
+*.npz
+*.npy
+aid/
+data/
+cache/
+hf_local/
+.env
