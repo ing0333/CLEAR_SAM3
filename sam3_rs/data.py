@@ -57,13 +57,14 @@ def download(files: list[str], local_dir: str, repo: str = AID_REPO, workers: in
         list(ex.map(lambda f: hf_hub_download(repo, f, repo_type="dataset", local_dir=local_dir), missing))
 
 
-def load_img(local_dir: str, f: str, repo: str = AID_REPO):
-    """Open an image; re-download once if the file is broken; return None if still unreadable."""
+def load_img(local_dir: str, f: str, repo: str | None = AID_REPO):
+    """Open an image; re-download once from `repo` if broken (repo=None: no retry);
+    return None if still unreadable."""
     for attempt in range(2):
         try:
             return Image.open(os.path.join(local_dir, f)).convert("RGB")
         except Exception:
-            if attempt == 0:
+            if attempt == 0 and repo is not None:
                 from huggingface_hub import hf_hub_download
                 hf_hub_download(repo, f, repo_type="dataset", local_dir=local_dir, force_download=True)
     return None

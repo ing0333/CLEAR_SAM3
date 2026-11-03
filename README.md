@@ -13,6 +13,15 @@
 > classifier over phrase presences, 20 labels/class), reaches **86.1%**; a control without parts
 > already gives 77.1%, so parts add +8.3%p and partly encode context. A coverage-based
 > "main-subject verifier" is reported as a negative result.
+>
+> **Part 2 — does it transfer?** On 4 datasets (AID, UC Merced, NWPU-RESISC45 from above;
+> SUN-AID, 26 AID concepts photographed from the ground) × 3 models (SAM 3, CLIP ViT-L/14,
+> RemoteCLIP ViT-L/14), CLEAR improves every one of the 12 settings, by +5.6 to +37.3%p
+> (mean: SAM 3 43.1→70.7, CLIP 66.9→85.5, RemoteCLIP 79.2→89.1). Label-free PPR beats two
+> simplified RS-TransCLIP-style transductive baselines (k-NN label propagation; EM prototype
+> refinement) in 10 of 12 settings, consistent with the errors being a class-prior skew rather
+> than noisy neighbours. For CLIP models, the few-shot PSC is close to but below a linear probe
+> on image embeddings, so PSC's value is specific to models without a usable image embedding.
 
 ---
 
@@ -110,12 +119,72 @@ presence 상위 후보 중 사진을 가장 넓게 덮는 개념을 고르게 �
 - MPV는 혼자 쓰면 44.1%로 OCT-S1보다 낮아요. 클래스마다 점수 크기가 달라서예요. PPR과 같이 써야 올라요.
 - PSC 이득의 대부분은 분류기 학습에서 와요(대조군 77.1%). 부분이 더한 건 +8.3%p예요.
 
+## 4-2. Part 2: 다른 데이터셋 · 다른 모델에서도 되나?
+
+AID 하나에서만 확인했다는 한계를 풀려고, 같은 모듈을 **데이터셋 4개 × 모델 3개 = 12개 조합**에 그대로 붙였어요.
+
+| 데이터셋 | 시점 | 클래스 | val / test | 표현 |
+| --- | --- | --- | --- | --- |
+| AID | 위 | 30 | 600 / 2,400 | `prompts/phrases.json` (149개) |
+| UC Merced | 위 | 21 | 420 / 630 | `prompts/phrases_ucm.json` (105개) |
+| NWPU-RESISC45 | 위 | 45 | 900 / 900 | `prompts/phrases_resisc45.json` (222개) |
+| SUN-AID | **앞** | 26 | 520 / 520 | AID 표현 그대로 (129개) |
+
+- **SUN-AID**는 SUN397에서 AID와 같은 개념의 장면(church, harbor, stadium…)을 골라 만든, 앞에서 찍은 사진 세트예요(`prompts/sun_aid_classes.json`). **질문(표현)은 AID와 똑같이** 두고 시점만 바꿨어요.
+- 모델: SAM 3(presence), CLIP ViT-L/14(OpenAI), RemoteCLIP ViT-L/14(원격탐사용 CLIP). CLIP 계열은 "a satellite photo of {}." / "a photo of {}." 템플릿 점수를 그대로 써요.
+- 새 비교 기준(RS-TransCLIP을 단순화한 두 가지, 둘 다 test 묶음을 한꺼번에 봐요):
+  - **TransLP**: 비슷한 이미지끼리 예측을 나눠 갖게 해요(k-NN 그래프 라벨 전파).
+  - **TransCLIP-lite**: 클래스 중심을 이미지 특징으로 다시 잡고, 텍스트 점수를 사전확률로 써요(EM). RS-TransCLIP에 있는 라플라시안 항과 공분산 학습은 없어요.
+  - CLIP 계열은 이미지 특징에 **선형 분류기(linear probe)**도 붙였어요. SAM 3는 이미지 임베딩을 쓰지 않아서 이 기준이 없어요.
+- 규칙은 Part 1과 같아요. 표현·T·r·α·λ는 val에서만 고르고, test는 한 번만 봤어요.
+
+**학습 없음 (test 정확도 %)**
+
+| 데이터셋 | 모델 | 원래 | +PPR | +TransLP | +TransCLIP-lite | **CLEAR** | 향상 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| AID | SAM 3 | 36.8 | 44.5 | 41.4 | 44.7 | **58.7** | +21.8 |
+| | CLIP | 63.7 | 71.7 | 66.1 | 70.5 | **85.2** | +21.5 |
+| | RemoteCLIP | 81.8 | 90.3 | 86.4 | 88.2 | **91.3** | +9.6 |
+| UC Merced | SAM 3 | 42.1 | 64.1 | 44.3 | 59.0 | **79.4** | +37.3 |
+| | CLIP | 64.0 | 75.7 | 65.7 | 72.5 | **88.3** | +24.3 |
+| | RemoteCLIP | 90.6 | 96.0 | 90.6 | 95.1 | **96.2** | +5.6 |
+| NWPU-RESISC45 | SAM 3 | 37.9 | 52.9 | 38.0 | 46.6 | **66.0** | +28.1 |
+| | CLIP | 61.1 | 70.1 | 63.4 | 67.9 | **79.9** | +18.8 |
+| | RemoteCLIP | 76.7 | 85.0 | 79.0 | 82.9 | **88.4** | +11.8 |
+| SUN-AID (앞) | SAM 3 | 55.6 | 68.3 | 56.3 | 61.2 | **78.7** | +23.1 |
+| | CLIP | 78.8 | 80.4 | 78.8 | 81.9 | **88.7** | +9.8 |
+| | RemoteCLIP | 67.7 | 78.3 | 68.1 | 73.1 | **80.6** | +12.9 |
+| **평균** | SAM 3 | 43.1 | 57.4 | 45.0 | 52.9 | **70.7** | +27.6 |
+| | CLIP | 66.9 | 74.5 | 68.5 | 73.2 | **85.5** | +18.6 |
+| | RemoteCLIP | 79.2 | 87.4 | 81.0 | 84.8 | **89.1** | +9.9 |
+
+**few-shot (val 클래스당 20장)**
+
+| 데이터셋 | 모델 | 대조군(원래 이름 LR) | PSC | **CLEAR-FS** | 선형 분류기(이미지 특징) |
+| --- | --- | --- | --- | --- | --- |
+| AID | SAM 3 / CLIP / RemoteCLIP | 77.1 / 90.2 / 93.3 | 85.4 / 92.3 / 93.5 | **86.1 / 92.4 / 93.6** | – / 95.5 / 95.8 |
+| UC Merced | 〃 | 86.5 / 91.1 / 96.0 | 92.7 / 93.5 / 97.6 | **93.5 / 93.7 / 97.8** | – / 95.2 / 97.8 |
+| NWPU-RESISC45 | 〃 | 72.8 / 84.1 / 88.2 | 80.0 / 86.0 / 88.7 | **81.9 / 86.1 / 89.3** | – / 88.3 / 92.1 |
+| SUN-AID (앞) | 〃 | 79.0 / 86.9 / 85.2 | 78.8 / 89.6 / 87.9 | **80.4 / 89.6 / 87.9** | – / 89.6 / 86.3 |
+
+전체 ablation과 val에서 고른 설정은 [`results/multi_benchmark.md`](results/multi_benchmark.md)에 있어요.
+
+**읽는 법**
+1. **모델을 바꿔도 통해요.** CLEAR는 12개 조합 전부에서 올랐어요(+5.6 ~ +37.3%p). 원래 점수가 낮을수록 많이 올라요(SAM 3 > CLIP > RemoteCLIP). SAM 3 전용 요령이 아니라, "클래스 이름이 모델이 아는 말이 아니다"와 "예측이 일부 클래스로 쏠린다"는 공통 문제를 고치는 거예요.
+2. **데이터셋을 바꿔도 통해요.** UC Merced와 RESISC45의 표현은 그 데이터셋 이미지에 모델을 돌려보기 전에 같은 지시문으로 써 둔 거예요.
+3. **시점을 바꿔도 통해요.** SUN-AID에서는 위에서 본 모습을 묘사한 AID 표현을 그대로 썼는데도 올랐어요(SAM 3 +23.1, CLIP +9.8). 같은 개념인데도 SAM 3 원래 점수는 앞에서 찍은 사진(55.6)이 위에서 찍은 사진(AID 36.8)보다 훨씬 높아요. **SAM 3의 약점이 "위에서 본 장면"이라는 진단**과 맞아요. 반대로 RemoteCLIP은 앞에서 찍은 사진에서 일반 CLIP보다 낮아요(67.7 vs 78.8). 위성 쪽으로 특화한 대가예요.
+4. **PPR이 TransCLIP 계열보다 나아요.** 12개 중 10개에서 PPR > TransCLIP-lite > TransLP였어요(예외: SUN-AID CLIP, AID SAM 3는 TransCLIP-lite가 근소하게 높음). 이웃끼리 예측을 맞추는 TransLP는 거의 효과가 없었어요(+0~4.6%p). 오류의 대부분이 "이웃이 흔들리는 문제"가 아니라 "클래스 쏠림"이라서, 쏠림을 직접 겨냥하는 PPR이 더 잘 먹혀요. CLEAR 위에 TransCLIP-lite를 얹는 것도 대부분 CLEAR보다 낮았어요.
+5. **few-shot에서는 SAM 3일 때만 PSC가 의미 있어요.** CLIP 계열은 이미지 특징에 선형 분류기를 붙이는 쪽이 PSC보다 같거나 높아요(SUN-AID RemoteCLIP만 예외). PSC는 SAM 3처럼 쓸 만한 이미지 임베딩이 없는 모델에서 "개념 점수로 장면 만들기"로 쓸 때 가치가 있어요.
+6. 솔직한 비교: 학습 없는 설정에서 **SAM 3 + CLEAR(평균 70.7)는 아직 CLIP 원래 점수(66.9)를 겨우 넘는 수준**이고, CLIP + CLEAR(85.5)나 RemoteCLIP(79.2)보다는 낮아요. 장면 분류 자체는 CLIP 계열이 유리하고, SAM 3의 장점은 마스크까지 같이 준다는 데 있어요.
+
 ## 5. 한계 (꼭 같이 읽어주세요)
-- **데이터셋 1개, 표본 1개(seed 0), test는 클래스당 80장**이에요. 다른 데이터셋(NWPU-RESISC45 등)에서도 확인이 필요해요.
-- **OCT 표현은 사람과 LLM이 만들었어요.** 8개 클래스는 진단 실험에서 먼저 썼고, 나머지 22개는 고정된 지시문으로 생성했어요(`prompts/phrases.json`).
+- **표본은 데이터셋마다 1개(seed 0)**이고, test는 클래스당 20~80장이에요. 1~2%p 차이는 표본 오차 안에 있을 수 있어요.
+- **OCT 표현은 사람과 LLM이 만들었어요.** AID 8개 클래스는 진단 실험에서 먼저 썼고, 나머지는 고정된 지시문으로 생성했어요(`prompts/phrases*.json`). UC Merced·RESISC45 표현은 모델을 돌려보기 전에 썼지만, 데이터셋 클래스 이름은 보고 썼어요.
+- **RemoteCLIP의 학습 데이터에는 UC Merced·RSICD·RSITMD 캡션이 들어 있어요.** 그래서 RemoteCLIP의 UC Merced 점수는 학습 분포와 겹쳐 있어서 높게 나왔을 수 있어요.
+- **TransLP · TransCLIP-lite는 RS-TransCLIP을 단순화한 거예요**(라플라시안 항, 공분산 학습 없음). 원 논문의 수치와 직접 비교하면 안 돼요.
+- **SUN-AID는 직접 만든 세트예요.** SUN397에서 AID 개념과 맞는 장면 26개를 골랐고(AID 30개 중 4개는 맞는 장면이 없어서 뺐어요), 한 SUN 장면이 AID 개념과 정확히 같지는 않아요.
 - **PPR은 test 묶음의 클래스 비율이 비슷하다고 가정해요.** 비율이 크게 다르면 `prior=`로 비율을 넣어야 해요.
 - **PSC가 배운 "부분"은 주변 환경인 경우가 있어요.** 예를 들어 Church ← "crowded rooftops", "parked cars"예요. AID 밖에서는 통하지 않을 수 있어요.
-- **비교 대상이 부족해요.** RemoteCLIP 같은 원격탐사용 CLIP 계열의 zero-shot·few-shot 결과와 같은 조건으로 비교하지 않았어요.
 - 기법 자체(LLM 프롬프트, 앙상블, 클래스 비율 보정, 개념 점수 위 선형 분류기)는 CLIP 계열에서 알려진 것들이에요. 이 저장소의 기여는 **SAM 3에 맞춘 적용과, 왜 통하는지에 대한 진단**이에요.
 
 ## 6. 실행 방법 (Colab, GPU)
@@ -130,6 +199,17 @@ python experiments/run_pipeline.py --work_dir /content/drive/MyDrive/SAM3_PGLC -
 - 2단계(CPU, 수 초): 위 표를 전부 다시 계산해서 `results/results.json`에 저장해요.
 - CPU 부분 테스트: `pytest -q tests`
 
+**Part 2 (다른 데이터셋 · 모델)** — `notebooks/benchmarks.ipynb`, 또는
+```bash
+pip install timm ftfy iopath datasets open_clip_torch
+python experiments/multi_benchmark.py --work_dir /content/drive/MyDrive/SAM3_PGLC \
+    --datasets ucm,sun_aid,resisc45,aid --models openai,remoteclip,sam3
+python experiments/make_report.py /content/drive/MyDrive/SAM3_PGLC/bench/multi_benchmark.json
+```
+- 데이터는 Hugging Face 미러에서 받아요: `blanchon/UC_Merced`, `timm/resisc45`, `tanganke/sun397`(test 7.2GB, 스트리밍), `blanchon/AID`.
+- L4 기준 CLIP 두 개는 데이터 준비 포함 약 40분, SAM 3는 UC Merced 40분 · SUN-AID 50분 · RESISC45 2.3시간 걸려요. AID의 SAM 3 점수는 Part 1 캐시를 다시 써요.
+- 점수 캐시가 있으면 모델을 불러오지 않고 CPU로 평가만 다시 해요.
+
 이 README의 숫자는 개발 노트북(셀 단위로 캐시하며 실행)에서 나왔어요. `run_pipeline.py`는 같은 절차를 한 번에 돌리지만, bf16 배치 계산의 작은 차이나 S1 선택의 동점 처리 때문에 소수점 아래 숫자는 조금 다를 수 있어요.
 
 ## 7. 구조
@@ -142,10 +222,19 @@ sam3_rs/
   balance.py              PPR
   composition.py          PSC
   metrics.py              정확도, 고친/망친 수, 오류 유형, 트리거 신호
-prompts/phrases.json      클래스별 표현 + 생성 지시문
-experiments/run_pipeline.py   전체 재현
+  benchmarks.py           Part 2 데이터셋 준비 (UC Merced, RESISC45, SUN-AID)
+  clip_scoring.py         CLIP / RemoteCLIP 점수·이미지 특징
+  transductive.py         비교 기준: TransLP, TransCLIP-lite
+prompts/phrases.json      AID 클래스별 표현 + 생성 지시문 (SUN-AID도 이걸 씀)
+prompts/phrases_ucm.json, phrases_resisc45.json   Part 2 표현
+prompts/sun_aid_classes.json  AID 개념 → SUN397 장면 대응표
+experiments/run_pipeline.py   Part 1 전체 재현
 experiments/area_verifier.py  실패한 확인 담당 실험 (부정 결과)
-notebooks/colab_demo.ipynb    Colab 실행용
+experiments/multi_benchmark.py  Part 2: 데이터셋 4 × 모델 3
+experiments/make_report.py    Part 2 결과 표 만들기
+notebooks/colab_demo.ipynb    Part 1 Colab 실행용
+notebooks/benchmarks.ipynb    Part 2 Colab 실행용
+results/                  notebook_results.md (Part 1), multi_benchmark.{json,md} (Part 2)
 tests/                    합성 데이터로 하는 CPU 테스트
 ```
 
@@ -153,6 +242,8 @@ tests/                    합성 데이터로 하는 CPU 테스트
 - SAM 3: Segment Anything with Concepts, [arXiv:2511.16719](https://arxiv.org/abs/2511.16719) · [code](https://github.com/facebookresearch/sam3)
 - Promptable Concept Segmentation from Above: Evaluating SAM 3 in Remote Sensing, [arXiv:2607.09583](https://arxiv.org/abs/2607.09583)
 - AID: Xia et al., TGRS 2017 · HF 미러 [`blanchon/AID`](https://huggingface.co/datasets/blanchon/AID)
+- UC Merced Land Use: Yang & Newsam, 2010 · NWPU-RESISC45: Cheng et al., Proc. IEEE 2017 · SUN397: Xiao et al., CVPR 2010
+- CLIP: Radford et al., 2021 · RemoteCLIP: Liu et al., [arXiv:2306.11029](https://arxiv.org/abs/2306.11029) · RS-TransCLIP: El Khoury et al., ICASSP 2025, [arXiv:2409.00698](https://arxiv.org/abs/2409.00698)
 - 관련: CuPL, DCLIP, Waffle (LLM 기반 클래스 설명) · Meta-prompting for zero-shot RS scene classification (ISPRS 2026) · SegEarth-OV3 ([arXiv:2512.08730](https://arxiv.org/abs/2512.08730))
 
 ## 라이선스

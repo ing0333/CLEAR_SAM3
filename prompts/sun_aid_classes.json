@@ -1,0 +1,31 @@
+{
+  "note": "Ground-level counterpart of AID: SUN397 scene categories that depict the same concept as an AID class. Written before running any model. The first SUN397 name found in the dataset's label list is used; AID classes with no match are dropped. Prompts and phrases for each class are taken unchanged from prompts/phrases.json (the AID bank), so the same questions are asked from a different viewpoint.",
+  "map": {
+    "Airport": ["airport terminal", "airport", "runway"],
+    "BaseballField": ["baseball field"],
+    "Beach": ["beach"],
+    "Bridge": ["bridge"],
+    "Church": ["church outdoor", "church"],
+    "Commercial": ["office building", "shopping mall outdoor", "downtown"],
+    "DenseResidential": ["apartment building outdoor"],
+    "Desert": ["desert sand", "desert vegetation"],
+    "Farmland": ["cultivated field", "field cultivated", "farm"],
+    "Forest": ["broadleaf forest", "forest broadleaf", "forest path"],
+    "Industrial": ["industrial area"],
+    "Meadow": ["wild field", "field wild", "pasture"],
+    "MediumResidential": ["residential neighborhood"],
+    "Mountain": ["mountain"],
+    "Park": ["park"],
+    "Parking": ["parking lot"],
+    "Playground": ["playground"],
+    "Pond": ["pond"],
+    "Port": ["harbor"],
+    "RailwayStation": ["train station platform", "platform train station", "train railway"],
+    "Resort": ["hotel outdoor", "outdoor hotel", "swimming pool outdoor", "outdoor swimming pool"],
+    "River": ["river"],
+    "School": ["schoolhouse", "school house"],
+    "Square": ["plaza"],
+    "Stadium": ["football stadium", "stadium football", "baseball stadium"],
+    "Viaduct": ["viaduct"]
+  }
+}

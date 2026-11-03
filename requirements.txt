@@ -10,3 +10,6 @@ numpy
 scikit-learn
 pillow
 pytest
+# Part 2 (other datasets / CLIP baselines)
+datasets
+open_clip_torch

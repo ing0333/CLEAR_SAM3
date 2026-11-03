@@ -18,9 +18,11 @@ def logit(p: np.ndarray, eps: float = 1e-6) -> np.ndarray:
     return np.log(p) - np.log1p(-p)
 
 
-def balance(P: np.ndarray, T: float = 2.0, iters: int = 500, lr: float = 0.5, prior=None):
-    """P: [N, C] scores in (0, 1). Returns (corrected logits [N, C], offsets b [C])."""
-    L = logit(P)
+def balance(P: np.ndarray, T: float = 2.0, iters: int = 500, lr: float = 0.5, prior=None,
+            is_logit: bool = False):
+    """P: [N, C] scores in (0, 1) (SAM 3 presence), or logits if is_logit=True (e.g. CLIP
+    similarities x logit scale). Returns (corrected logits [N, C], offsets b [C])."""
+    L = np.asarray(P, float) if is_logit else logit(P)
     N, C = L.shape
     target = np.full(C, 1.0 / C) if prior is None else np.asarray(prior, float) / np.sum(prior)
     b = np.zeros(C)

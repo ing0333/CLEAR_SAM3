@@ -1,0 +1,27 @@
+{
+  "instruction": "For each aerial scene class, list 4 short English noun phrases naming visible objects or surfaces that characterize the scene when seen from above.",
+  "note": "Written before running any model on UC Merced. Keys are the dataset's label names; the first phrase of each list is the readable class name used as the baseline prompt.",
+  "phrases": {
+    "agricultural": ["agricultural land", "crop field", "farm field", "cultivated land", "rows of crops"],
+    "airplane": ["airplane", "aircraft", "jet plane", "parked airplane", "airplane wings"],
+    "baseballdiamond": ["baseball diamond", "baseball field", "baseball infield", "dirt infield", "baseball park"],
+    "beach": ["beach", "sandy beach", "shoreline", "sea waves", "coastline"],
+    "buildings": ["buildings", "office building", "flat roofs", "large buildings", "building rooftops"],
+    "chaparral": ["chaparral", "shrubland", "dry bushes", "scrub vegetation", "sparse shrubs"],
+    "denseresidential": ["dense residential area", "dense houses", "crowded rooftops", "residential buildings", "packed houses"],
+    "forest": ["forest", "trees", "dense forest", "tree canopy", "woodland"],
+    "freeway": ["freeway", "highway", "multi-lane road", "highway lanes", "motorway"],
+    "golfcourse": ["golf course", "golf green", "fairway", "sand bunker", "golf course lawn"],
+    "harbor": ["harbor", "dock", "marina", "boats", "moored boats"],
+    "intersection": ["intersection", "road intersection", "crossroads", "street crossing", "crosswalk"],
+    "mediumresidential": ["medium residential area", "houses", "residential houses", "suburban houses", "house rooftops"],
+    "mobilehomepark": ["mobile home park", "mobile homes", "trailer park", "rows of trailers", "manufactured homes"],
+    "overpass": ["overpass", "highway overpass", "elevated road", "road bridge", "highway interchange"],
+    "parkinglot": ["parking lot", "parked cars", "car park", "cars", "parking spaces"],
+    "river": ["river", "river water", "flowing river", "riverbank", "stream"],
+    "runway": ["runway", "airport runway", "airstrip", "runway markings", "landing strip"],
+    "sparseresidential": ["sparse residential area", "scattered houses", "detached houses", "rural houses", "isolated house"],
+    "storagetanks": ["storage tanks", "storage tank", "oil tanks", "cylindrical tanks", "fuel storage tanks"],
+    "tenniscourt": ["tennis court", "tennis courts", "tennis court lines", "hard court", "sports court"]
+  }
+}

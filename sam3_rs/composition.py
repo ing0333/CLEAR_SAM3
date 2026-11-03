@@ -16,12 +16,17 @@ from .balance import logit
 
 
 class PartComposer:
-    def __init__(self, features: list[str], Cs=(0.003, 0.01, 0.03, 0.1, 0.3, 1.0), cv: int = 5):
+    def __init__(self, features: list[str], Cs=(0.003, 0.01, 0.03, 0.1, 0.3, 1.0), cv: int = 5,
+                 is_logit: bool = False):
+        """is_logit=False: H holds probabilities (SAM 3 presence) and is mapped through logit;
+        is_logit=True: H already holds logits / similarities (CLIP)."""
         self.features = list(features)
+        self.is_logit = is_logit
         self.clf = LogisticRegressionCV(Cs=list(Cs), cv=cv, max_iter=5000)
 
     def _X(self, H: dict) -> np.ndarray:
-        return logit(np.stack([H[p] for p in self.features], 1))
+        X = np.stack([H[p] for p in self.features], 1)
+        return X if self.is_logit else logit(X)
 
     def fit(self, H: dict, y: np.ndarray) -> "PartComposer":
         X = self._X(H)
