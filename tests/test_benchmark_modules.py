@@ -50,3 +50,52 @@ def test_lazy_loader_defers_model():
     z = mb._Lazy(lambda: made.append(1) or type("M", (), {"f": lambda self: 7})())
     assert made == []
     assert z.f() == 7 and made == [1]
+
+
+def test_segmentation_selection_picks_informative_phrase():
+    from sam3_rs import segmentation as SG
+    r = np.random.default_rng(0)
+    N, H, C = 6, 32, 3
+    gt = r.integers(0, C, (N, H, H)).astype(np.uint8)
+    gt[:, :2] = 255                                    # ignored rows
+    maps = np.zeros((N, 2 * C, H, H), np.uint8)        # phrase 2c = useless name, 2c+1 = good phrase
+    for c in range(C):
+        maps[:, 2 * c] = r.integers(0, 120, (N, H, H))
+        maps[:, 2 * c + 1] = np.where(gt == c, 200, 30)
+    cand = [[2 * c, 2 * c + 1] for c in range(C)]
+    names = SG.miou(SG.confusion(maps, gt, [[2 * c] for c in range(C)], C))
+    chosen, _ = SG.select_phrases(maps, gt, cand, [2 * c for c in range(C)], C)
+    assert chosen == [2 * c + 1 for c in range(C)]
+    assert SG.miou(SG.confusion(maps, gt, [[j] for j in chosen], C)) > names + 30
+    bg = SG.confusion(maps, gt, [[j] for j in chosen], C, bg_thd=0.99, bg_idx=0)
+    assert bg[:, 0].sum() == (gt != 255).sum()         # everything below threshold -> background
+
+
+def test_rstc_wrapper_matches_official_zero_shot_path():
+    """Needs torch and a clone of RS-TransCLIP (RSTC_DIR, default ../ext/RS-TransCLIP)."""
+    import contextlib
+    import io
+    import pytest
+    torch = pytest.importorskip("torch")
+    rdir = os.environ.get("RSTC_DIR", os.path.join(HERE, "..", "..", "ext", "RS-TransCLIP"))
+    if not os.path.isdir(rdir):
+        pytest.skip("RS-TransCLIP not cloned")
+    if not torch.cuda.is_available():   # the solver calls .cuda(); make it a no-op on CPU
+        torch.Tensor.cuda = lambda self, *a, **k: self
+        torch.nn.Module.cuda = lambda self, *a, **k: self
+    import seeds_transclip as ST
+    run = ST.make_rstc(rdir)
+    import TransCLIP_solver.TransCLIP as TC
+    r = np.random.default_rng(0)
+    K, n, d = 8, 400, 48
+    yy = r.integers(0, K, n)
+    cent = r.normal(size=(K, d))
+    Fx = cent[yy] * 0.6 + r.normal(size=(n, d))
+    Fx /= np.linalg.norm(Fx, axis=1, keepdims=True)
+    Tx = cent / np.linalg.norm(cent, axis=1, keepdims=True) + r.normal(size=(K, d)) * 0.3
+    Tx /= np.linalg.norm(Tx, axis=1, keepdims=True)
+    Ft, Tt = torch.tensor(Fx).float(), torch.tensor(Tx.T).float()
+    with contextlib.redirect_stdout(io.StringIO()):
+        _, _, _, official = TC.TransCLIP_solver(None, None, None, None, Ft, torch.tensor(yy), Tt, verbose=True)
+    ours = run(Fx, yy, torch.softmax(100 * Ft @ Tt, 1).numpy())
+    assert abs(ours - official) < 1e-6

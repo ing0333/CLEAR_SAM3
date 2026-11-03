@@ -127,8 +127,9 @@ class _Lazy:
 
 
 # ------------------------------------------------------------------------ evaluation
-def evaluate(bank, classes, S, R, kind, feats=None):
-    """S[k] = dict(X=[N,P], y=[N]) for k in val/test; feats[k] = image features or None."""
+def evaluate(bank, classes, S, R, kind, feats=None, rstc=None):
+    """S[k] = dict(X=[N,P], y=[N]) for k in val/test; feats[k] = image features or None.
+    rstc(features, labels, initial_probs) -> accuracy: optional official RS-TransCLIP solver."""
     col = {p: j for j, p in enumerate(R)}
     H = {k: {p: np.nan_to_num(S[k]["X"][:, j]) for p, j in col.items()} for k in S}
     yv, yt = S["val"]["y"], S["test"]["y"]
@@ -181,6 +182,10 @@ def evaluate(bank, classes, S, R, kind, feats=None):
     res["OCT+MPV+TransLP"] = M.accuracy(tlp(Pe), yt)
     res["OCT+MPV+TransCLIP-lite"] = M.accuracy(tcl(Pe), yt)
     res["MPV_setting"] = [r, how]
+    if rstc is not None:   # official RS-TransCLIP solver (fixed published hyper-parameters)
+        sm = lambda Z: np.exp(Z - Z.max(1, keepdims=True)) / np.exp(Z - Z.max(1, keepdims=True)).sum(1, keepdims=True)
+        res["+RS-TransCLIP"] = rstc(G["test"], yt, sm(to_L(base["test"])))
+        res["CLEAR+RS-TransCLIP"] = rstc(G["test"], yt, sm(bal(Pe) / T))
 
     ctrl = PartComposer(names, is_logit=isl).fit(H["val"], yv)
     res["LR(class names)"] = M.accuracy(ctrl.predict_proba(H["test"]), yt)
