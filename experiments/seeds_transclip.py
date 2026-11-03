@@ -64,8 +64,18 @@ def make_rstc(rstc_dir):
     return run
 
 
+def cached_split(ds, work_dir, data_root):
+    """Read the split written by multi_benchmark.py without touching the images (the score
+    caches are all that is needed here), so a fresh runtime does not re-download datasets."""
+    if ds == "aid":
+        sp = json.load(open(os.path.join(work_dir, "split_seed0.json")))
+        sp["classes"] = sorted({c for _, c in sp["val"] + sp["test"]})
+        return sp, os.path.join(data_root, "aid"), "blanchon/AID"
+    return json.load(open(os.path.join(work_dir, "bench", ds, "split.json"))), os.path.join(data_root, ds), None
+
+
 def load_pool(ds, model, work_dir, data_root):
-    sp, data_dir, repo = MB.get_split(ds, work_dir, data_root)
+    sp, data_dir, repo = cached_split(ds, work_dir, data_root)
     classes = sp["classes"]
     bank = MB.bank_for(ds, classes)
     R = CT.unique_phrases(bank)
